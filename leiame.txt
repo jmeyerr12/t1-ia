@@ -6,88 +6,91 @@ Integrantes da Equipe:
 * Vitor Faria Medeiros da Silveira — GRR20232342
 
 1. Descrição Geral
-   Este projeto implementa o algoritmo A* (A-estrela) em C++ para encontrar a sequência mínima de movimentos que leva dos estados iniciais aos estados objetivo em dois problemas baseados em tabuleiros de xadrez. A implementação foi dividida em módulos independentes:
+   Este projeto implementa o algoritmo A* em C++ para encontrar a sequência mínima de movimentos que leva dos estados iniciais aos objetivos em dois tabuleiros de xadrez. A implementação é modular e separa:
 
 * o procedimento de busca (A*);
 * a fila de prioridade (OPEN);
-* a modelagem de cada problema (estados, movimentos e objetivo);
+* a modelagem de cada problema (estados, movimentos, objetivo);
 * as funções heurísticas específicas.
 
-A busca A* é genérica e pode ser usada em qualquer problema que siga a API definida no código.
+2. Estrutura do Código-Fonte
 
-2. Estrutura do Código-Fonte (arquivos na raiz do projeto)
-
-* main.cpp: interface de linha de comando, seleção de problema e execução do A*.
-* astar.cpp / astar.hpp: implementação genérica do A*, controle da fila, expansão e reconstrução do plano.
-* pq.cpp / pq.hpp: fila de prioridade baseada em heap mínimo.
-* heuristics.cpp / heuristics.hpp: heurísticas usadas para os dois problemas.
-* problem1.cpp / problem1.hpp: modelagem do Problema 1 (estado 3x6, movimentos, objetivo e impressão do tabuleiro).
-* problem2.cpp / problem2.hpp: modelagem do Problema 2 (estado 4x4, promoção do peão, movimentos e impressão do tabuleiro).
+* main.cpp: interface e execução geral.
+* astar.cpp / astar.hpp: implementação genérica do A*.
+* pq.cpp / pq.hpp: fila de prioridade.
+* heuristics.cpp / heuristics.hpp: heurísticas de P1 e P2.
+* problem1.cpp / problem1.hpp: modelagem do problema 1.
+* problem2.cpp / problem2.hpp: modelagem do problema 2.
 
 3. Funcionamento do A*
-   A função astar_solve(const AStarAPI& api) usa uma estrutura de funções que o problema deve fornecer:
+   A função astar_solve usa uma estrutura de callbacks para lidar com diferentes problemas. Mantém listas OPEN e mapas de melhor custo g, pais e repositório de estados. O A* expande sempre o nó de menor f = g + h e termina ao encontrar o objetivo.
 
-* initial(): cria o estado inicial;
-* is_goal(s): verifica se o estado é objetivo;
-* successors(s, out_states, out_costs, out_actions): gera sucessores e ações possíveis;
-* heuristic(s): retorna o valor h(n);
-* to_key(s, key): gera uma chave única para hashing;
-* clone(s) e free_state(s): manipulam a memória dos estados.
-
-O A* mantém:
-
-* OPEN: fila de prioridade (heap mínimo);
-* best_g: custo mínimo g(n) encontrado para cada estado;
-* parent: mapa para reconstrução do caminho;
-* repo: repositório de cópias de estados.
-
-O algoritmo ignora nós obsoletos (lazy deletion), reconstrói o plano quando atinge o objetivo e libera a memória antes de retornar o resultado.
-
-4. Fila de Prioridade (pq.cpp / pq.hpp)
-   A fila armazena nós com informações do estado, custo g, custo total f e um índice de desempate. A ordenação prioriza o menor f, depois o maior g e por fim a ordem de inserção.
-   A API oferece funções para criar, destruir, inserir, remover e drenar a fila, garantindo que toda a memória seja liberada ao final da execução.
+4. Fila de Prioridade
+   A fila é um heap mínimo que ordena nós por f, depois por g (maior primeiro), e em caso de empate, pela ordem de inserção. As operações principais são push, pop, empty e liberação de memória.
 
 5. Heurísticas (heuristics.cpp / heuristics.hpp)
-   Problema 1 - p1_heuristic:
-   Move o cavalo preto (k) até a posição (3,6). A heurística calcula a distância mínima de cavalo até o destino em um tabuleiro sem peças, usando BFS. Se o destino estiver ocupado, soma-se uma penalidade de 1. É admissível e consistente.
 
-Problema 2 - p2_heuristic:
-Move o peão (p) até (1,4), onde é promovido a rainha (q), e depois leva a rainha até (4,1). A heurística tem duas fases: uma para o peão, estimando os passos verticais até a promoção, e outra para a rainha, usando distâncias mínimas de raios. Penalidades leves são aplicadas quando há bloqueios, mantendo a admissibilidade.
+Problema 1 - p1_heuristic
+Objetivo: estimar o número mínimo de lances para o cavalo preto k sair da posição atual e chegar em (3,6), sem superestimar.
 
-6. Problema 1 (problem1.cpp / problem1.hpp)
-   O estado é uma grade 3x6 com paredes (#), casas vazias (_) e peças (k, b, c, t). Não há capturas.
-   Estado inicial:
-   1: k b b b b t
-   2: c c c c t t
-   3: # # # # t _
-   Objetivo: cavalo preto k na posição (3,6).
-   As torres e bispos se movem como no xadrez, parando antes de obstáculos. Os cavalos se movem em L. Todos os movimentos têm custo 1. O estado é serializado em string e cada sucessor é uma cópia nova. As funções p1_print e p1_apply_action são usadas para depuração e replay.
+Como é calculada
 
-7. Problema 2 (problem2.cpp / problem2.hpp)
-   O estado é uma grade 4x4 com paredes (#), casas vazias (_) e peças (p, q, b, c, t). Não há capturas.
-   Estado inicial:
-   1: c c c c
-   2: b b b b
-   3: t t t t
-   4: _ # # p
-   Objetivo: rainha q na posição (4,1).
-   O peão sobe uma casa por vez e é promovido automaticamente a q ao chegar na linha 1, coluna 4. As demais peças se movem conforme as regras do xadrez. O custo é 1 por movimento. A serialização e clonagem seguem o mesmo formato do problema 1.
+1. Pré-cálculo de distâncias do cavalo em tabuleiro vazio com paredes: é feita uma BFS a partir do alvo (3,6). Para cada casa válida, guarda-se em dist[r][c] o menor número de saltos de cavalo necessários para alcançar o alvo, respeitando paredes (#). Essa BFS é montada uma única vez e reaproveitada.
+2. Consulta direta: dado um estado, localiza-se a posição atual do k e define-se h = dist[k_linha][k_coluna]. Se dist estiver infinito para essa casa, retorna 0 para manter a admissibilidade (a heurística prefere não contar nada em casos extremos a superestimar).
+3. Penalidade conservadora do alvo ocupado: se a casa (3,6) não estiver vazia e não for o próprio k, soma-se 1 à heurística. Intuição: mesmo em um cenário ideal, ao menos uma ação será necessária para liberar a casa objetivo antes do k ocupá-la.
 
-8. Interface de Linha de Comando (main.cpp)
+Por que é admissível e consistente
+
+* Admissível: a BFS considera um tabuleiro sem peças bloqueando o cavalo (apenas paredes). O custo real com peças nunca será menor do que o estimado.
+* Consistente: para qualquer aresta de custo 1 (um movimento), a diferença entre h(estado) e h(sucessor) é no máximo 1, pois as distâncias de cavalo formam uma métrica no grafo de movimentos com paredes fixas.
+
+Observações
+
+* Só o padrão de movimentos e paredes é levado em conta. Outras peças não reduzem a estimativa, garantindo subestimativa.
+* A penalidade de alvo ocupado é 1, um limite inferior seguro para a necessidade de liberar a casa.
+
+Problema 2 - p2_heuristic
+Objetivo: duas fases. Fase 1: levar o peão p até (1,4), onde ocorre promoção automática para q. Fase 2: levar a rainha q até (4,1).
+
+Como é calculada
+A heurística detecta a fase pela presença de p no tabuleiro:
+
+Fase 1 (se ainda existe p)
+
+1. Distância vertical mínima do peão: se não houver paredes acima na mesma coluna do peão, h_p recebe o número de passos verticais até a linha 1 (1-based). Na implementação, pr é a linha 0-based do peão; portanto, h_p começa com pr.
+2. Bloqueios na coluna: soma-se a quantidade de casas ocupadas por peças (exceto paredes) entre o peão e a linha 1, pois cada bloqueio exige ao menos uma ação para liberar o caminho em um cenário otimista.
+3. Casa de promoção ocupada: se a casa (1,4) estiver ocupada por algo diferente de vazio e do próprio p, soma 1 (liberação mínima conservadora).
+4. Caso exista parede (#) acima do peão na mesma coluna, a heurística fica 0, evitando superestimativa quando a promoção está estruturalmente bloqueada.
+
+Fase 2 (após a promoção, existe q)
+
+1. Distância mínima de rainha com paredes: constrói-se qdist via BFS de raios a partir do alvo (4,1), respeitando paredes (#). Em cada direção (8 ao todo), avança-se até borda/parede. qdist[r][c] guarda o mínimo de lances.
+2. Consulta direta: h_q = qdist[q_linha][q_coluna]. Se estiver infinito, retorna 0 (conservador e admissível).
+3. Alvo ocupado: se a casa (4,1) estiver ocupada por algo diferente de vazio e de q, soma 1.
+4. Ajuste quando h_q == 1 com raio bloqueado: se a rainha está, em princípio, a um lance do alvo, verifica-se a linha de visão. Se houver peça no raio até o alvo, soma-se 1, refletindo a necessidade mínima de um movimento intermediário para liberar a linha.
+
+Por que é admissível e consistente
+
+* Admissível: a fase do peão usa passos verticais e penalidades mínimas; a fase da rainha usa distâncias mínimas com paredes. Em ambas, a heurística não supera o custo real.
+* Consistente: custo por movimento é 1 e as atualizações de h entre estados vizinhos respeitam a desigualdade triangular, pois derivam de grafos de movimentos com custos unitários.
+
+Efeito prático
+
+* Em P1, a heurística direciona a exploração para casas que reduzem os saltos do cavalo.
+* Em P2, a divisão em fases evita explorar movimentos de rainha antes da promoção e, após promovido, privilegia caminhos com linhas desobstruídas.
+
+6. Problema 1
+   Estado: grade 3x6, peças k, b, c, t. Objetivo: mover k para (3,6). Gera movimentos válidos conforme o xadrez, sem capturas. Sucessores são criados para cada movimento permitido. Clonagem, serialização e impressão são feitas por funções auxiliares.
+
+7. Problema 2
+   Estado: grade 4x4, peças p, q, b, c, t. O peão sobe até (1,4), vira q e a rainha segue até (4,1). Movimentos seguem as regras de xadrez. O sistema reconhece automaticamente a promoção e aplica a mudança de peça. A heurística conduz a busca por etapas.
+
+8. Interface de Linha de Comando
    Uso: ./run [1|2] [-d] [-x]
-   Parâmetros:
-   1 ou 2: escolhe o problema (padrão 1)
-   -d: modo de depuração (mostra tabuleiros e ações)
-   -x: mostra número de nós expandidos
-   Saída: lista de ações no formato <peça> <linha_origem> <coluna_origem> <linha_destino> <coluna_destino> ou “sem-solucao”.
+   1 ou 2 escolhe o problema, -d mostra o replay, -x mostra o número de estados expandidos. A saída é a lista de ações mínimas ou “sem-solucao”.
 
-9. Compilação
-   Exemplo de compilação com g++:
-   g++ -O2 -std=gnu++17 main.cpp astar.cpp pq.cpp heuristics.cpp problem1.cpp problem2.cpp -o run
+9. Observações
+    O algoritmo A* foi implementado em sua forma original, sem variações de limitação de memória (como SMA* ou IDA*). Isso é suficiente porque o espaço de estados é pequeno (tabuleiros de 3x6 e 4x4), o que permite armazenar todas as combinações possíveis de peças em memória sem risco de esgotamento. O consumo é de poucos megabytes, muito abaixo da capacidade disponível, então não há necessidade de versões memory-bounded. O A* clássico mantém a fila OPEN e os estados visitados em memória, o que garante soluções ótimas dentro desse espaço reduzido.
 
-10. Observações
-    Os estados são tratados como imutáveis. O uso de unordered_map permite acesso rápido a best_g e parent. O desempate por maior g reduz reexpansões. Lazy deletion evita remoção cara na fila. O método pq_drain_and_free_states previne vazamentos de memória. As funções de depuração ajudam na validação do plano encontrado.
-
-11. Testes e Validação
-    O modo -d permite verificar a execução passo a passo. O modo -x exibe o total de estados expandidos. A saída segue o formato exigido no enunciado.
-
+10. Testes e Validação
+    O modo -d permite verificar passo a passo a aplicação do plano e o modo -x mostra o número de nós expandidos, permitindo comparar eficiência e correção das heurísticas.
