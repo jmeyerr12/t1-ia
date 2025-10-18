@@ -1,0 +1,93 @@
+Integrantes da Equipe:
+
+* João Meyer Muhlmann — GRR20232347
+* Thiago Zilio Assunção — GRR20234265
+* Tiago Augusto Fiatte Prestes — GRR20232334
+* Vitor Faria Medeiros da Silveira — GRR20232342
+
+1. Descrição Geral
+   Este projeto implementa o algoritmo A* (A-estrela) em C++ para encontrar a sequência mínima de movimentos que leva dos estados iniciais aos estados objetivo em dois problemas baseados em tabuleiros de xadrez. A implementação foi dividida em módulos independentes:
+
+* o procedimento de busca (A*);
+* a fila de prioridade (OPEN);
+* a modelagem de cada problema (estados, movimentos e objetivo);
+* as funções heurísticas específicas.
+
+A busca A* é genérica e pode ser usada em qualquer problema que siga a API definida no código.
+
+2. Estrutura do Código-Fonte (arquivos na raiz do projeto)
+
+* main.cpp: interface de linha de comando, seleção de problema e execução do A*.
+* astar.cpp / astar.hpp: implementação genérica do A*, controle da fila, expansão e reconstrução do plano.
+* pq.cpp / pq.hpp: fila de prioridade baseada em heap mínimo.
+* heuristics.cpp / heuristics.hpp: heurísticas usadas para os dois problemas.
+* problem1.cpp / problem1.hpp: modelagem do Problema 1 (estado 3x6, movimentos, objetivo e impressão do tabuleiro).
+* problem2.cpp / problem2.hpp: modelagem do Problema 2 (estado 4x4, promoção do peão, movimentos e impressão do tabuleiro).
+
+3. Funcionamento do A*
+   A função astar_solve(const AStarAPI& api) usa uma estrutura de funções que o problema deve fornecer:
+
+* initial(): cria o estado inicial;
+* is_goal(s): verifica se o estado é objetivo;
+* successors(s, out_states, out_costs, out_actions): gera sucessores e ações possíveis;
+* heuristic(s): retorna o valor h(n);
+* to_key(s, key): gera uma chave única para hashing;
+* clone(s) e free_state(s): manipulam a memória dos estados.
+
+O A* mantém:
+
+* OPEN: fila de prioridade (heap mínimo);
+* best_g: custo mínimo g(n) encontrado para cada estado;
+* parent: mapa para reconstrução do caminho;
+* repo: repositório de cópias de estados.
+
+O algoritmo ignora nós obsoletos (lazy deletion), reconstrói o plano quando atinge o objetivo e libera a memória antes de retornar o resultado.
+
+4. Fila de Prioridade (pq.cpp / pq.hpp)
+   A fila armazena nós com informações do estado, custo g, custo total f e um índice de desempate. A ordenação prioriza o menor f, depois o maior g e por fim a ordem de inserção.
+   A API oferece funções para criar, destruir, inserir, remover e drenar a fila, garantindo que toda a memória seja liberada ao final da execução.
+
+5. Heurísticas (heuristics.cpp / heuristics.hpp)
+   Problema 1 - p1_heuristic:
+   Move o cavalo preto (k) até a posição (3,6). A heurística calcula a distância mínima de cavalo até o destino em um tabuleiro sem peças, usando BFS. Se o destino estiver ocupado, soma-se uma penalidade de 1. É admissível e consistente.
+
+Problema 2 - p2_heuristic:
+Move o peão (p) até (1,4), onde é promovido a rainha (q), e depois leva a rainha até (4,1). A heurística tem duas fases: uma para o peão, estimando os passos verticais até a promoção, e outra para a rainha, usando distâncias mínimas de raios. Penalidades leves são aplicadas quando há bloqueios, mantendo a admissibilidade.
+
+6. Problema 1 (problem1.cpp / problem1.hpp)
+   O estado é uma grade 3x6 com paredes (#), casas vazias (_) e peças (k, b, c, t). Não há capturas.
+   Estado inicial:
+   1: k b b b b t
+   2: c c c c t t
+   3: # # # # t _
+   Objetivo: cavalo preto k na posição (3,6).
+   As torres e bispos se movem como no xadrez, parando antes de obstáculos. Os cavalos se movem em L. Todos os movimentos têm custo 1. O estado é serializado em string e cada sucessor é uma cópia nova. As funções p1_print e p1_apply_action são usadas para depuração e replay.
+
+7. Problema 2 (problem2.cpp / problem2.hpp)
+   O estado é uma grade 4x4 com paredes (#), casas vazias (_) e peças (p, q, b, c, t). Não há capturas.
+   Estado inicial:
+   1: c c c c
+   2: b b b b
+   3: t t t t
+   4: _ # # p
+   Objetivo: rainha q na posição (4,1).
+   O peão sobe uma casa por vez e é promovido automaticamente a q ao chegar na linha 1, coluna 4. As demais peças se movem conforme as regras do xadrez. O custo é 1 por movimento. A serialização e clonagem seguem o mesmo formato do problema 1.
+
+8. Interface de Linha de Comando (main.cpp)
+   Uso: ./run [1|2] [-d] [-x]
+   Parâmetros:
+   1 ou 2: escolhe o problema (padrão 1)
+   -d: modo de depuração (mostra tabuleiros e ações)
+   -x: mostra número de nós expandidos
+   Saída: lista de ações no formato <peça> <linha_origem> <coluna_origem> <linha_destino> <coluna_destino> ou “sem-solucao”.
+
+9. Compilação
+   Exemplo de compilação com g++:
+   g++ -O2 -std=gnu++17 main.cpp astar.cpp pq.cpp heuristics.cpp problem1.cpp problem2.cpp -o run
+
+10. Observações
+    Os estados são tratados como imutáveis. O uso de unordered_map permite acesso rápido a best_g e parent. O desempate por maior g reduz reexpansões. Lazy deletion evita remoção cara na fila. O método pq_drain_and_free_states previne vazamentos de memória. As funções de depuração ajudam na validação do plano encontrado.
+
+11. Testes e Validação
+    O modo -d permite verificar a execução passo a passo. O modo -x exibe o total de estados expandidos. A saída segue o formato exigido no enunciado.
+

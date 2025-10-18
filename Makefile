@@ -30,3 +30,9 @@ run1: $(TARGET)
 
 run2: $(TARGET)
 	./$(TARGET) 2
+
+entrega:
+	mkdir -p entrega
+	cp $(SRC) *.hpp leiame.txt Makefile entrega/
+	tar -czvf entrega.tgz entrega
+	rm -rf entrega

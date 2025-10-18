@@ -99,7 +99,6 @@ int p2_heuristic(StatePtr sp) {
         }
         if (!wall_above) {
             h += pr; // passos verticais mínimos até a linha 0
-            // soma nº de bloqueios na coluna (entre pr-1..1, exclui célula de promoção)
             int blockers = 0;
             for (int r = pr-1; r >= 1; --r) {
                 char ch = s->g[r][pc];

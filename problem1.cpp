@@ -3,20 +3,20 @@
 #include "problem1.hpp"
 using namespace std;
 
-// --- Utilidades ---
+// --- utilidades ---
 static inline bool inside(int r, int c) { return (r>=0 && r<3 && c>=0 && c<6); }
 static inline bool cell_is_empty(char ch) { return ch == '_'; }
 static inline bool is_wall(char ch)     { return ch == '#'; }
 static inline bool is_piece(char ch)    { return ch=='k'||ch=='b'||ch=='c'||ch=='t'; }
 
-// Move textual no formato pedido: "<peca> r0 c0 r1 c1" (1-based)
+// move textual no formato pedido: "<peca> r0 c0 r1 c1" (1-based)
 static string action_str(char piece, int r0,int c0,int r1,int c1) {
     return string(1,piece) + " " +
            to_string(r0+1) + " " + to_string(c0+1) + " " +
            to_string(r1+1) + " " + to_string(c1+1);
 }
 
-// Gera movimentos de deslizantes (bispo/torre) com bloqueio
+// gera movimentos de deslizantes (bispo/torre) com bloqueio
 static void gen_slide_moves(const P1State* s, int r, int c,
                             const vector<pair<int,int>>& dirs,
                             vector<StatePtr>& out_states,
@@ -27,22 +27,19 @@ static void gen_slide_moves(const P1State* s, int r, int c,
     for (auto [dr,dc] : dirs) {
         int nr = r + dr, nc = c + dc;
         while (inside(nr,nc) && !is_wall(s->g[nr][nc]) && !is_piece(s->g[nr][nc])) {
-            // destino precisa ser vazio
             if (!cell_is_empty(s->g[nr][nc])) break;
-            // cria novo estado aplicando o movimento
-            P1State* ns = new P1State(*s);
+            P1State* ns = new P1State(*s); // cria novo estado aplicando o movimento
             ns->g[nr][nc] = piece;
             ns->g[r][c]   = '_';
             out_states.push_back((StatePtr)ns);
             out_costs.push_back(1);
             out_actions.push_back(action_str(piece, r,c, nr,nc));
-            // continua deslizando na mesma direção
-            nr += dr; nc += dc;
+            nr += dr; nc += dc; // continua deslizando na mesma direção
         }
     }
 }
 
-// Gera movimentos do cavalo (tanto 'k' quanto 'c')
+// gera movimentos do cavalo (tanto 'k' quanto 'c')
 static void gen_knight_moves(const P1State* s, int r, int c,
                              vector<StatePtr>& out_states,
                              vector<int>& out_costs,
@@ -65,10 +62,10 @@ static void gen_knight_moves(const P1State* s, int r, int c,
     }
 }
 
-// --- Callbacks exigidos pela A* ---
+// --- callbacks exigidos pela A* ---
 
 StatePtr p1_initial() {
-    // Estado consistente com o enunciado (ajustado):
+    // cstado consistente com o enunciado (ajustado):
     // L1: k b b b b t
     // L2: c c c c t t
     // L3: # # # # t _
@@ -99,14 +96,12 @@ void p1_successors(StatePtr sp,
             if (!is_piece(ch)) continue;
 
             switch (ch) {
-                case 't': {
-                    // Torre: ortogonais
+                case 't': { // Torre: ortogonais
                     static const vector<pair<int,int>> dirs = {{-1,0},{1,0},{0,-1},{0,1}};
                     gen_slide_moves(s, r,c, dirs, out_states, out_costs, out_actions);
                     break;
                 }
-                case 'b': {
-                    // Bispo: diagonais
+                case 'b': { // Bispo: diagonais
                     static const vector<pair<int,int>> dirs = {{-1,-1},{-1,1},{1,-1},{1,1}};
                     gen_slide_moves(s, r,c, dirs, out_states, out_costs, out_actions);
                     break;

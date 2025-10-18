@@ -9,7 +9,7 @@ using namespace std;
 // ponteiro genérico para estado (cada problema define sua struct e faz cast)
 using StatePtr = void*;
 
-// funções que cada problema precisa fornecer pro A*
+// funcoes que cada problema precisa fornecer pro A*
 struct AStarAPI {
     StatePtr (*initial)();   // cria estado inicial
     bool (*is_goal)(StatePtr s);
@@ -18,7 +18,7 @@ struct AStarAPI {
                        vector<int>& out_costs,
                        vector<string>& out_actions);
     int (*heuristic)(StatePtr s);
-    void (*to_key)(StatePtr s, string& key); // chave única do estado
+    void (*to_key)(StatePtr s, string& key); // chave unica do estado
     StatePtr (*clone)(StatePtr s);
     void (*free_state)(StatePtr s);
 };

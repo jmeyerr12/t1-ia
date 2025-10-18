@@ -173,7 +173,6 @@ void p2_free_state(StatePtr sp) {
     delete (P2State*)sp;
 }
 
-// --- debug helpers (impressão e aplicação de ação) ---
 static bool p2_parse_act(const string& a, char& pc,int& r0,int& c0,int& r1,int& c1){
     istringstream iss(a);
     string p; if(!(iss>>p>>r0>>c0>>r1>>c1)) return false;
